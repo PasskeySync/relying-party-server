@@ -1,0 +1,197 @@
+openapi: "3.0.3"
+info:
+  title: "RelayingParty API"
+  description: "RelayingParty API"
+  version: "1.0.0"
+servers:
+- url: "https://RelayingParty"
+paths:
+  /register/begin:
+    post:
+      description: ""
+      parameters:
+      - name: "username"
+        in: "query"
+        required: false
+        schema:
+          type: "string"
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/PublicKeyCredentialCreationOptions"
+  /register/submit:
+    post:
+      description: ""
+      responses:
+        "200":
+          description: "OK"
+          content:
+            '*/*':
+              schema:
+                type: "object"
+  /session/increment:
+    get:
+      description: ""
+      responses:
+        "200":
+          description: "OK"
+          content:
+            text/plain:
+              schema:
+                type: "string"
+              examples:
+                Example#1:
+                  value: ""
+  /:
+    get:
+      description: ""
+      responses:
+        "200":
+          description: "OK"
+          content:
+            text/plain:
+              schema:
+                type: "string"
+              examples:
+                Example#1:
+                  value: "Hello World!"
+components:
+  schemas:
+    RelyingPartyIdentity:
+      type: "object"
+      properties:
+        name:
+          type: "string"
+        id:
+          type: "string"
+    ByteArray:
+      type: "object"
+      properties:
+        bytes:
+          type: "array"
+          items:
+            type: "string"
+            format: "byte"
+    UserIdentity:
+      type: "object"
+      properties:
+        name:
+          type: "string"
+        displayName:
+          type: "string"
+        id:
+          $ref: "#/components/schemas/ByteArray"
+    PublicKeyCredentialParameters:
+      type: "object"
+      properties:
+        alg:
+          type: "string"
+          enum:
+          - "EdDSA"
+          - "ES256"
+          - "ES384"
+          - "ES512"
+          - "RS256"
+          - "RS384"
+          - "RS512"
+          - "RS1"
+        type:
+          type: "string"
+          enum:
+          - "PUBLIC_KEY"
+    AuthenticatorTransport:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+    PublicKeyCredentialDescriptor:
+      type: "object"
+      properties:
+        type:
+          type: "string"
+          enum:
+          - "PUBLIC_KEY"
+        id:
+          $ref: "#/components/schemas/ByteArray"
+        transports:
+          $ref: "#/components/schemas/AuthenticatorTransport"
+    AuthenticatorSelectionCriteria:
+      type: "object"
+      properties:
+        authenticatorAttachment:
+          type: "string"
+          enum:
+          - "CROSS_PLATFORM"
+          - "PLATFORM"
+        residentKey:
+          type: "string"
+          enum:
+          - "DISCOURAGED"
+          - "PREFERRED"
+          - "REQUIRED"
+        userVerification:
+          type: "string"
+          enum:
+          - "DISCOURAGED"
+          - "PREFERRED"
+          - "REQUIRED"
+    AppId:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+    LargeBlobSupport:
+      type: "object"
+      properties:
+        value:
+          type: "string"
+    LargeBlobRegistrationInput:
+      type: "object"
+      properties:
+        support:
+          $ref: "#/components/schemas/LargeBlobSupport"
+    RegistrationExtensionInputs:
+      type: "object"
+      properties:
+        appidExclude:
+          $ref: "#/components/schemas/AppId"
+        credProps:
+          type: "boolean"
+        largeBlob:
+          $ref: "#/components/schemas/LargeBlobRegistrationInput"
+        uvm:
+          type: "boolean"
+    PublicKeyCredentialCreationOptions:
+      type: "object"
+      properties:
+        rp:
+          $ref: "#/components/schemas/RelyingPartyIdentity"
+        user:
+          $ref: "#/components/schemas/UserIdentity"
+        challenge:
+          $ref: "#/components/schemas/ByteArray"
+        pubKeyCredParams:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/PublicKeyCredentialParameters"
+        timeout:
+          type: "integer"
+          format: "int64"
+        excludeCredentials:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/PublicKeyCredentialDescriptor"
+        authenticatorSelection:
+          $ref: "#/components/schemas/AuthenticatorSelectionCriteria"
+        attestation:
+          type: "string"
+          enum:
+          - "NONE"
+          - "INDIRECT"
+          - "DIRECT"
+          - "ENTERPRISE"
+        extensions:
+          $ref: "#/components/schemas/RegistrationExtensionInputs"
