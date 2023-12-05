@@ -120,7 +120,7 @@ fun Application.configureWebauthn() {
             }
             val session = call.sessions.get<UserSession>() ?: UserSession()
             call.sessions.set(session)
-            val request= relyingParty.startAssertion(
+            val request = relyingParty.startAssertion(
                 StartAssertionOptions.builder()
                     .username(info.email) // Or .userHandle(ByteArray) if preferred
                     .build()
@@ -151,8 +151,9 @@ fun Application.configureWebauthn() {
                     call.respond(HttpStatusCode.BadRequest, "Assertion failed")
                     return@post
                 }
+                //TODO: 持久化用户数据
                 credentialRepository.updateRegistration(              // Some database access method of your own design
-                "alice",                     // Query by username or other appropriate user identifier
+                    request.username.get(),                  // Query by username or other appropriate user identifier
                     result.credential.credentialId,
                     result.signatureCount,
                 )
