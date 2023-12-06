@@ -114,17 +114,21 @@ fun Application.configureWebauthn() {
         )
         post("/login/begin") {
             val info = call.receive<LoginInfo>()
-            if (credentialRepository.getCredentialIdsForUsername(info.email).isEmpty()) {
-                call.respond(HttpStatusCode.BadRequest, "User does not exist")
-                return@post
+            if (info.email.isNotEmpty() && credentialRepository
+                    .getCredentialIdsForUsername(info.email).isEmpty()) {
+                return@post call.respond(HttpStatusCode.BadRequest, "User does not exist")
             }
             val session = call.sessions.get<UserSession>() ?: UserSession()
             call.sessions.set(session)
-            val request = relyingParty.startAssertion(
+            val options = if (info.email.isEmpty()) {
+                StartAssertionOptions.builder()
+                    .build()
+            } else {
                 StartAssertionOptions.builder()
                     .username(info.email) // Or .userHandle(ByteArray) if preferred
                     .build()
-            )
+            }
+            val request = relyingParty.startAssertion(options)
             authnRequestCache[session.uid] = request
             call.respondText(request.toCredentialsGetJson())
         }
@@ -148,12 +152,11 @@ fun Application.configureWebauthn() {
                 )
 
                 if (!result.isSuccess) {
-                    call.respond(HttpStatusCode.BadRequest, "Assertion failed")
-                    return@post
+                    return@post call.respond(HttpStatusCode.BadRequest, "Assertion failed")
                 }
                 //TODO: 持久化用户数据
                 credentialRepository.updateRegistration(              // Some database access method of your own design
-                    request.username.get(),                  // Query by username or other appropriate user identifier
+                    result.username,                  // Query by username or other appropriate user identifier
                     result.credential.credentialId,
                     result.signatureCount,
                 )
