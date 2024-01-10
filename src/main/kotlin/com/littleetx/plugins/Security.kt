@@ -7,7 +7,7 @@ import io.ktor.server.sessions.*
 import java.util.*
 
 
-data class UserSession(val uid: UUID = UUID.randomUUID())
+data class UserSession(val sessionID: UUID = UUID.randomUUID())
 fun Application.configureSecurity() {
     data class MySession(val count: Int = 0)
     install(Sessions) {
