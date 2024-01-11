@@ -9,7 +9,7 @@ class ConfigureWebauthnTest {
     @Test
     fun testPostRegisterBegin() = testApplication {
         application {
-            configureWebauthn()
+            configureRouting()
         }
         client.post("/register/begin").apply {
             TODO("Please write your test here")
@@ -19,7 +19,7 @@ class ConfigureWebauthnTest {
     @Test
     fun testPostRegisterSubmit() = testApplication {
         application {
-            configureWebauthn()
+            configureRouting()
         }
         client.post("/register/submit").apply {
             TODO("Please write your test here")

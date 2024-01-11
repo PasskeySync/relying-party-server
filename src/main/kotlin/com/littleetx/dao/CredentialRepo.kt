@@ -30,8 +30,8 @@ class CredentialInfo(id: EntityID<Int>) : IntEntity(id) {
     var signatureCount by CredentialInfos.signatureCount
 }
 
-fun CredentialInfo.toRegisteredCredential(): RegisteredCredential {
-    return RegisteredCredential.builder()
+suspend fun CredentialInfo.toRegisteredCredential(): RegisteredCredential = query {
+    RegisteredCredential.builder()
         .credentialId(ByteArray.fromBase64(credentialId))
         .userHandle(ByteArray.fromBase64(user.userHandle))
         .publicKeyCose(ByteArray.fromBase64(publicKeyCose))
@@ -40,10 +40,10 @@ fun CredentialInfo.toRegisteredCredential(): RegisteredCredential {
 }
 
 interface CredentialRepo : CredentialRepository {
-    suspend fun findCredentialsByUser(user: UserInfo): Set<RegisteredCredential>
-    suspend fun findCredentialsById(credentialId: ByteArray): Set<RegisteredCredential>
-    suspend fun findCredentialsByUserAndId(user: UserInfo, credentialId: ByteArray): Optional<RegisteredCredential>
-    suspend fun addRegistration(user: UserInfo, registration: RegisteredCredential): CredentialInfo
+    suspend fun findCredentialsByUser(user: UserInfo): Set<CredentialInfo>
+    suspend fun findCredentialsById(credentialId: ByteArray): Set<CredentialInfo>
+    suspend fun findCredentialsByUserAndId(user: UserInfo, credentialId: ByteArray): Optional<CredentialInfo>
+    suspend fun addRegistration(registration: RegisteredCredential): CredentialInfo
     suspend fun updateRegistration(email: String, credentialId: ByteArray, signatureCount: Long)
 }
 
@@ -53,7 +53,7 @@ object CredentialRepoImpl : CredentialRepo {
     override fun getCredentialIdsForUsername(email: String): Set<PublicKeyCredentialDescriptor> = runBlocking {
         val user = userRepo.findUserByEmail(email).getOrNull() ?: return@runBlocking emptySet()
         findCredentialsByUser(user).map {
-            PublicKeyCredentialDescriptor.builder().id(it.credentialId).build()
+            PublicKeyCredentialDescriptor.builder().id(ByteArray.fromBase64(it.credentialId)).build()
         }.toSet()
     }
 
@@ -71,35 +71,33 @@ object CredentialRepoImpl : CredentialRepo {
 
     override fun lookup(credentialId: ByteArray, userHandle: ByteArray): Optional<RegisteredCredential> = runBlocking {
         val user = userRepo.findUserByUserHandle(userHandle).getOrNull() ?: return@runBlocking Optional.empty()
-        findCredentialsByUserAndId(user, credentialId)
+        val cred = findCredentialsByUserAndId(user, credentialId)
+        if (cred.isPresent) Optional.of(cred.get().toRegisteredCredential())
+        else Optional.empty()
     }
 
     override fun lookupAll(credentialId: ByteArray): Set<RegisteredCredential> = runBlocking {
-        findCredentialsById(credentialId)
+        findCredentialsById(credentialId).map { it.toRegisteredCredential() }.toSet()
     }
 
-    override suspend fun findCredentialsByUser(user: UserInfo): Set<RegisteredCredential> = query {
-        CredentialInfo
-            .find { CredentialInfos.user eq user.id }
-            .map { it.toRegisteredCredential() }.toSet()
+    override suspend fun findCredentialsByUser(user: UserInfo): Set<CredentialInfo> = query {
+        CredentialInfo.find { CredentialInfos.user eq user.id }.toSet()
     }
 
-    override suspend fun findCredentialsById(credentialId: ByteArray): Set<RegisteredCredential> = query {
-        CredentialInfo
-            .find { CredentialInfos.credentialId eq credentialId.base64 }
-            .map { it.toRegisteredCredential() }.toSet()
+    override suspend fun findCredentialsById(credentialId: ByteArray): Set<CredentialInfo> = query {
+        CredentialInfo.find { CredentialInfos.credentialId eq credentialId.base64 }.toSet()
     }
 
-    override suspend fun findCredentialsByUserAndId(user: UserInfo, credentialId: ByteArray): Optional<RegisteredCredential> = query {
+    override suspend fun findCredentialsByUserAndId(user: UserInfo, credentialId: ByteArray): Optional<CredentialInfo> = query {
         Optional.ofNullable(
             CredentialInfo
                 .find { (CredentialInfos.credentialId eq credentialId.base64) and (CredentialInfos.user eq user.id) }
                 .firstOrNull()
-                ?.toRegisteredCredential()
         )
     }
 
-    override suspend fun addRegistration(user: UserInfo, registration: RegisteredCredential): CredentialInfo = query {
+    override suspend fun addRegistration(registration: RegisteredCredential): CredentialInfo = query {
+        val user = userRepo.findUserByUserHandle(registration.userHandle).get()
         CredentialInfo.new {
             this.user = user
             this.credentialId = registration.credentialId.base64

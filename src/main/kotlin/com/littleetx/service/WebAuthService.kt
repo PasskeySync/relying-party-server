@@ -1,16 +1,16 @@
 package com.littleetx.service
 
-import com.littleetx.dao.CredentialRepo
-import com.littleetx.dao.CredentialRepoImpl
-import com.littleetx.dao.UserRepo
-import com.littleetx.dao.UserRepoImpl
+import com.littleetx.dao.*
 import com.yubico.webauthn.*
 import com.yubico.webauthn.data.*
 import com.yubico.webauthn.data.ByteArray
 import com.yubico.webauthn.exception.AssertionFailedException
+import com.yubico.webauthn.exception.InvalidSignatureCountException
 import com.yubico.webauthn.exception.RegistrationFailedException
 import io.ktor.util.logging.*
 import org.slf4j.Logger
+import java.util.*
+import kotlin.jvm.optionals.getOrElse
 import kotlin.random.Random
 
 typealias RegistrationCredential = PublicKeyCredential<
@@ -20,9 +20,15 @@ typealias AssertionCredential = PublicKeyCredential<AuthenticatorAssertionRespon
 
 interface WebAuthService {
     suspend fun startRegistration(email: String, username: String): PublicKeyCredentialCreationOptions
-    suspend fun finishRegistration(request: PublicKeyCredentialCreationOptions, credential: RegistrationCredential): Boolean
+    suspend fun startNewCredential(user: UserInfo): PublicKeyCredentialCreationOptions
+    suspend fun finishRegistration(request: PublicKeyCredentialCreationOptions, credential: RegistrationCredential): Optional<UserInfo>
     suspend fun startAuthentication(email: String): AssertionRequest
-    suspend fun finishAuthentication(request: AssertionRequest, credential: AssertionCredential): Boolean
+
+    /**
+     * This method will test whether the credential is valid and update the signature count.
+     * @return user info if success
+     */
+    suspend fun finishAuthentication(request: AssertionRequest, credential: AssertionCredential): Optional<UserInfo>
 }
 
 
@@ -59,7 +65,19 @@ object WebAuthServiceImpl : WebAuthService {
         )
     }
 
-    override suspend fun finishRegistration(request: PublicKeyCredentialCreationOptions, credential: RegistrationCredential): Boolean {
+    override suspend fun startNewCredential(user: UserInfo): PublicKeyCredentialCreationOptions {
+        return relyingParty.startRegistration(
+            StartRegistrationOptions.builder()
+                .user(user.toUserIdentity())
+                .authenticatorSelection(
+                    AuthenticatorSelectionCriteria.builder()
+                        .residentKey(ResidentKeyRequirement.REQUIRED)
+                        .build())
+                .build()
+        )
+    }
+
+    override suspend fun finishRegistration(request: PublicKeyCredentialCreationOptions, credential: RegistrationCredential): Optional<UserInfo> {
         try {
             val result = relyingParty.finishRegistration(
                 FinishRegistrationOptions.builder()
@@ -68,9 +86,10 @@ object WebAuthServiceImpl : WebAuthService {
                     .build()
             )
             // save result
-            val user = userRepo.createUser(request.user.displayName, request.user.id, request.user.name)
+            val user = userRepo.findUserByEmail(request.user.name).getOrElse {
+                userRepo.createUser(request.user.displayName, request.user.id, request.user.name)
+            }
             credentialRepo.addRegistration(
-                user,
                 RegisteredCredential.builder()
                     .credentialId(result.keyId.id) // Credential ID and public key for credential
                     .userHandle(request.user.id)
@@ -78,10 +97,10 @@ object WebAuthServiceImpl : WebAuthService {
                     .signatureCount(result.signatureCount)
                     .build()
             )
-            return true
+            return Optional.of(user)
         } catch (e: RegistrationFailedException) {
             logger.error("Registration failed", e)
-            return false
+            return Optional.empty()
         }
     }
 
@@ -97,7 +116,7 @@ object WebAuthServiceImpl : WebAuthService {
         return relyingParty.startAssertion(options)
     }
 
-    override suspend fun finishAuthentication(request: AssertionRequest, credential: AssertionCredential): Boolean {
+    override suspend fun finishAuthentication(request: AssertionRequest, credential: AssertionCredential): Optional<UserInfo> {
         try {
             val result = relyingParty.finishAssertion(
                 FinishAssertionOptions.builder()
@@ -107,16 +126,18 @@ object WebAuthServiceImpl : WebAuthService {
                     .response(credential)
                     .build()
             )
-            if (!result.isSuccess) return false
-            credentialRepo.updateRegistration(              // Some database access method of your own design
-                result.username,                  // Query by username or other appropriate user identifier
+            if (!result.isSuccess) return Optional.empty()
+            credentialRepo.updateRegistration(
+                result.username,
                 result.credential.credentialId,
                 result.signatureCount,
             )
-            return true
+            return userRepo.findUserByEmail(result.username)
+        } catch (e: InvalidSignatureCountException) {
+            logger.error("Invalid signature count", e)
         } catch (e: AssertionFailedException) {
             logger.error("Assertion failed", e)
-            return false
         }
+        return Optional.empty()
     }
 }

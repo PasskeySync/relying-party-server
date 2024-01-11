@@ -2,6 +2,7 @@ package com.littleetx.dao
 
 import com.littleetx.plugins.query
 import com.yubico.webauthn.data.ByteArray
+import com.yubico.webauthn.data.UserIdentity
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
@@ -20,6 +21,14 @@ class UserInfo(id: EntityID<Int>) : IntEntity(id) {
     var username by UserInfos.username
     var userHandle by UserInfos.userHandle
     var email by UserInfos.email
+}
+
+fun UserInfo.toUserIdentity(): UserIdentity {
+    return UserIdentity.builder()
+        .name(email)
+        .displayName(username)
+        .id(ByteArray.fromBase64(userHandle))
+        .build()
 }
 
 interface UserRepo {

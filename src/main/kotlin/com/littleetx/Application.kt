@@ -1,8 +1,8 @@
 package com.littleetx
 
 import com.littleetx.plugins.configureDatabase
+import com.littleetx.plugins.configureRouting
 import com.littleetx.plugins.configureSecurity
-import com.littleetx.plugins.configureWebauthn
 import io.ktor.server.application.*
 import io.ktor.server.netty.*
 
@@ -12,5 +12,5 @@ fun main(args: Array<String>): Unit = EngineMain.main(args)
 fun Application.module() {
     configureDatabase()
     configureSecurity()
-    configureWebauthn()
+    configureRouting()
 }
