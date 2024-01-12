@@ -1,9 +1,8 @@
 package com.littleetx.service
 
 import com.littleetx.dao.CredentialInfo
-import com.littleetx.dao.CredentialRepo
-import com.littleetx.dao.CredentialRepoImpl
 import com.littleetx.dao.UserInfo
+import com.littleetx.dao.credentialRepo
 import com.littleetx.plugins.UserSession
 import java.util.*
 
@@ -14,9 +13,10 @@ interface UserService {
     suspend fun getUserCredentials(session: UserSession): Set<CredentialInfo>
 }
 
+val userService: UserService = UserServiceImpl
+
 object UserServiceImpl : UserService {
     private val loginSessions = mutableMapOf<UserSession, UserInfo>()
-    private val credentialRepo: CredentialRepo = CredentialRepoImpl
     override suspend fun login(session: UserSession, user: UserInfo) {
         loginSessions[session] = user
     }

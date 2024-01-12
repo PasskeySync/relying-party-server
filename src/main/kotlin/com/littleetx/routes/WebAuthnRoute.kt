@@ -1,12 +1,9 @@
 package com.littleetx.routes
 
-import com.littleetx.dao.UserRepo
-import com.littleetx.dao.UserRepoImpl
+import com.littleetx.dao.userRepo
 import com.littleetx.plugins.UserSession
-import com.littleetx.service.UserService
-import com.littleetx.service.UserServiceImpl
-import com.littleetx.service.WebAuthService
-import com.littleetx.service.WebAuthServiceImpl
+import com.littleetx.service.userService
+import com.littleetx.service.webAuthService
 import com.yubico.webauthn.AssertionRequest
 import com.yubico.webauthn.data.PublicKeyCredential
 import com.yubico.webauthn.data.PublicKeyCredentialCreationOptions
@@ -23,17 +20,7 @@ import kotlin.jvm.optionals.getOrNull
 private val registryRequestCache = mutableMapOf<UUID, PublicKeyCredentialCreationOptions>()
 private val authnRequestCache = mutableMapOf<UUID, AssertionRequest>()
 fun Route.webauthnRoute() {
-    val userRepo: UserRepo = UserRepoImpl
-    val userServices: UserService = UserServiceImpl
-    val webAuthService: WebAuthService = WebAuthServiceImpl
     val log = application.log
-
-    fun String.isValidEmail(): Boolean {
-        return isNotEmpty() && matches(Regex("([a-zA-Z0-9_\\-.]+)@([a-zA-Z0-9_\\-.]+)\\.([a-zA-Z]{2,5})"))
-    }
-    fun String.isValidUsername(): Boolean {
-        return isNotEmpty() && matches(Regex("[a-zA-Z0-9_]+"))
-    }
 
     @Serializable
     data class RegisterInfo(
@@ -64,7 +51,7 @@ fun Route.webauthnRoute() {
         post("/create") {
             val session = call.sessions.get<UserSession>()
                 ?: return@post call.respond(HttpStatusCode.BadRequest, "Unknown session")
-            val user = userServices.getUserInfo(session).getOrNull()
+            val user = userService.getUserInfo(session).getOrNull()
                 ?: return@post call.respond(HttpStatusCode.BadRequest, "Not login!")
 
             val options = webAuthService.startNewCredential(user)
@@ -72,7 +59,7 @@ fun Route.webauthnRoute() {
             call.respondText(options.toCredentialsCreateJson())
         }
 
-        post("finish") {
+        post("/finish") {
             val publicKeyCredentialJson = call.receiveText()
             log.info("receiving publicKeyCredentialJson: $publicKeyCredentialJson")
             val pkc = PublicKeyCredential.parseRegistrationResponseJson(publicKeyCredentialJson)
@@ -87,7 +74,7 @@ fun Route.webauthnRoute() {
 
             log.info("User ${request.user.name} registered")
             registryRequestCache.remove(session.sessionID)
-            userServices.login(session, user)
+            userService.login(session, user)
             call.respond(HttpStatusCode.OK, "Registration Success")
         }
     }
@@ -101,7 +88,7 @@ fun Route.webauthnRoute() {
             return email.isValidEmail()
         }
 
-        post("begin") {
+        post("/begin") {
             val info = call.receive<LoginInfo>()
             if (info.email.isNotEmpty() && !info.isValid()) {
                 return@post call.respond(HttpStatusCode.BadRequest, "Invalid email")
@@ -117,7 +104,7 @@ fun Route.webauthnRoute() {
             call.respondText(request.toCredentialsGetJson())
         }
 
-        post("finish") {
+        post("/finish") {
             val publicKeyCredentialJson = call.receiveText()
             val pkc = PublicKeyCredential.parseAssertionResponseJson(publicKeyCredentialJson)
             val session = call.sessions.get<UserSession>()
@@ -128,7 +115,7 @@ fun Route.webauthnRoute() {
                 ?: return@post call.respond(HttpStatusCode.BadRequest, "Authentication failed")
 
             log.info("User ${user.email} authenticated")
-            userServices.login(session, user)
+            userService.login(session, user)
             call.respond(HttpStatusCode.OK, "Authentication Success")
         }
     }

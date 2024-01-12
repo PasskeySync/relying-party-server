@@ -1,5 +1,6 @@
 package com.littleetx.plugins
 
+import com.littleetx.routes.authnRoute
 import com.littleetx.routes.userRoute
 import com.littleetx.routes.webauthnRoute
 import io.ktor.serialization.kotlinx.json.*
@@ -14,6 +15,7 @@ fun Application.configureRouting() {
     }
     routing {
         webauthnRoute()
+        authnRoute()
         userRoute()
     }
 }

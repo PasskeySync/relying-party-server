@@ -1,6 +1,7 @@
 package com.littleetx.plugins
 
 import com.littleetx.dao.CredentialInfos
+import com.littleetx.dao.PasswordInfos
 import com.littleetx.dao.UserInfos
 import io.ktor.server.application.*
 import kotlinx.coroutines.Dispatchers
@@ -13,6 +14,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 val tables = arrayOf(
     UserInfos,
     CredentialInfos,
+    PasswordInfos,
 )
 
 fun Application.configureDatabase() {

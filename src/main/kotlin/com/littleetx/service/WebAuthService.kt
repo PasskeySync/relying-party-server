@@ -43,10 +43,10 @@ val relyingParty: RelyingParty = RelyingParty.builder()
     .origins(setOf("http://localhost:3000")) // allow to authenticate dev frontend
     .build()
 
+val webAuthService: WebAuthService = WebAuthServiceImpl
+
 object WebAuthServiceImpl : WebAuthService {
     private val logger: Logger = KtorSimpleLogger(javaClass.name)
-    private val credentialRepo: CredentialRepo = CredentialRepoImpl
-    private val userRepo: UserRepo = UserRepoImpl
     override suspend fun startRegistration(email: String, username: String): PublicKeyCredentialCreationOptions {
         val userHandle = ByteArray(Random.nextBytes(32))
         return relyingParty.startRegistration(

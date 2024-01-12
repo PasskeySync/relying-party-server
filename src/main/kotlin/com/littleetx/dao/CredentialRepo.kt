@@ -47,6 +47,7 @@ interface CredentialRepo : CredentialRepository {
     suspend fun updateRegistration(email: String, credentialId: ByteArray, signatureCount: Long)
 }
 
+val credentialRepo: CredentialRepo = CredentialRepoImpl
 
 object CredentialRepoImpl : CredentialRepo {
     private val userRepo: UserRepo = UserRepoImpl

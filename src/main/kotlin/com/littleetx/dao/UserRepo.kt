@@ -38,6 +38,8 @@ interface UserRepo {
     suspend fun createUser(username: String, userHandle: ByteArray, email: String): UserInfo
 }
 
+val userRepo: UserRepo = UserRepoImpl
+
 object UserRepoImpl : UserRepo {
     override suspend fun findUserByEmail(email: String): Optional<UserInfo> = query {
         Optional.ofNullable(UserInfo.find { UserInfos.email eq email }.firstOrNull())

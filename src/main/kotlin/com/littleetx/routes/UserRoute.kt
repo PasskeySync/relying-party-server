@@ -3,8 +3,7 @@ package com.littleetx.routes
 import com.littleetx.dao.CredentialInfo
 import com.littleetx.dao.UserInfo
 import com.littleetx.plugins.UserSession
-import com.littleetx.service.UserService
-import com.littleetx.service.UserServiceImpl
+import com.littleetx.service.userService
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
@@ -15,8 +14,6 @@ import kotlin.jvm.optionals.getOrNull
 
 
 fun Route.userRoute() {
-    val userService: UserService = UserServiceImpl
-    val log = application.log
 
     route("/user") {
         @Serializable
@@ -53,13 +50,5 @@ fun Route.userRoute() {
             val credentials = userService.getUserCredentials(session)
             call.respond(credentials.map { it.toEntity() })
         }
-    }
-
-    post("/logout") {
-        val session = call.sessions.get<UserSession>()
-            ?: return@post call.respond(HttpStatusCode.BadRequest, "Unknown session")
-        userService.logout(session)
-        log.info("User logout: $session")
-        call.respond(HttpStatusCode.OK)
     }
 }
