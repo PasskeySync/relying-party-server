@@ -117,6 +117,7 @@ fun Route.userRoute() {
                 }
                 passwordRepo.setEnablePassword(user, false)
             }
+            call.respond(HttpStatusCode.OK)
         }
 
         @Serializable
@@ -143,6 +144,7 @@ fun Route.userRoute() {
                 return@post call.respond(HttpStatusCode.BadRequest, "Password not match")
             }
             passwordRepo.setPassword(user, encodePassword(request.newPassword))
+            call.respond(HttpStatusCode.OK)
         }
     }
 }
