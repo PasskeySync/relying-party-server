@@ -42,8 +42,7 @@ fun Route.authnRoute() {
         if (!info.isValid()) {
             return@post call.respond(HttpStatusCode.BadRequest, "Invalid register info")
         }
-        val session = call.sessions.get<UserSession>() ?: UserSession()
-        call.sessions.set(session)
+        val session = call.sessions.getOrSet<UserSession> { UserSession() }
         if (userRepo.findUserByEmail(info.email).isPresent) {
             return@post call.respond(HttpStatusCode.BadRequest, "User already exists")
         }
@@ -71,8 +70,7 @@ fun Route.authnRoute() {
         if (!info.isValid()) {
             return@post call.respond(HttpStatusCode.BadRequest, "Invalid email or password")
         }
-        val session = call.sessions.get<UserSession>() ?: UserSession()
-        call.sessions.set(session)
+        val session = call.sessions.getOrSet<UserSession> { UserSession() }
 
         val user = userRepo.findUserByEmail(info.email).getOrNull()
             ?: return@post call.respond(HttpStatusCode.BadRequest, "User not exists")
@@ -87,4 +85,6 @@ fun Route.authnRoute() {
         log.info("User ${user.email} login via plain password")
         return@post call.respond(HttpStatusCode.OK)
     }
+
+
 }

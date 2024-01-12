@@ -24,6 +24,7 @@ interface PasswordRepo {
     suspend fun getPasswordInfo(user: UserInfo): PasswordInfo
     suspend fun setEnablePassword(user: UserInfo, enable: Boolean)
     suspend fun setPassword(user: UserInfo, password: String)
+    suspend fun deletePassword(user: UserInfo)
 }
 
 val passwordRepo: PasswordRepo = PasswordRepoImpl
@@ -42,5 +43,9 @@ object PasswordRepoImpl : PasswordRepo {
 
     override suspend fun setPassword(user: UserInfo, password: String) = query {
         getPasswordInfo(user).password = password
+    }
+
+    override suspend fun deletePassword(user: UserInfo) = query {
+        getPasswordInfo(user).delete()
     }
 }

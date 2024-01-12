@@ -41,8 +41,7 @@ fun Route.webauthnRoute() {
             if (userRepo.findUserByEmail(info.email).isPresent) {
                 return@post call.respond(HttpStatusCode.BadRequest, "User already exists")
             }
-            val session = call.sessions.get<UserSession>() ?: UserSession()
-            call.sessions.set(session)
+            val session = call.sessions.getOrSet<UserSession> { UserSession() }
             val options = webAuthService.startRegistration(info.email, info.username)
             registryRequestCache[session.sessionID] = options
             call.respondText(options.toCredentialsCreateJson())
@@ -96,8 +95,7 @@ fun Route.webauthnRoute() {
             if (info.email.isNotEmpty() && userRepo.findUserByEmail(info.email).isEmpty) {
                 return@post call.respond(HttpStatusCode.BadRequest, "User does not exist")
             }
-            val session = call.sessions.get<UserSession>() ?: UserSession()
-            call.sessions.set(session)
+            val session = call.sessions.getOrSet<UserSession> { UserSession() }
 
             val request = webAuthService.startAuthentication(info.email)
             authnRequestCache[session.sessionID] = request

@@ -44,7 +44,9 @@ interface CredentialRepo : CredentialRepository {
     suspend fun findCredentialsById(credentialId: ByteArray): Set<CredentialInfo>
     suspend fun findCredentialsByUserAndId(user: UserInfo, credentialId: ByteArray): Optional<CredentialInfo>
     suspend fun addRegistration(registration: RegisteredCredential): CredentialInfo
-    suspend fun updateRegistration(email: String, credentialId: ByteArray, signatureCount: Long)
+    suspend fun updateRegistration(user: UserInfo, credentialId: ByteArray, signatureCount: Long): Boolean
+
+    suspend fun deleteRegistration(user: UserInfo, credentialId: ByteArray): Boolean
 }
 
 val credentialRepo: CredentialRepo = CredentialRepoImpl
@@ -105,14 +107,21 @@ object CredentialRepoImpl : CredentialRepo {
             this.publicKeyCose = registration.publicKeyCose.base64
             this.signatureCount = registration.signatureCount
         }
-
     }
 
-    override suspend fun updateRegistration(email: String, credentialId: ByteArray, signatureCount: Long) = query {
-        val user = userRepo.findUserByEmail(email).getOrNull() ?: return@query
+    override suspend fun updateRegistration(user: UserInfo, credentialId: ByteArray, signatureCount: Long): Boolean = query {
         val credential = CredentialInfo
             .find { (CredentialInfos.credentialId eq credentialId.base64) and (CredentialInfos.user eq user.id) }
-            .firstOrNull() ?: return@query
+            .firstOrNull() ?: return@query false
         credential.signatureCount = signatureCount
+        return@query true
+    }
+
+    override suspend fun deleteRegistration(user: UserInfo, credentialId: ByteArray) = query {
+        val credential = CredentialInfo
+            .find { (CredentialInfos.credentialId eq credentialId.base64) and (CredentialInfos.user eq user.id) }
+            .firstOrNull() ?: return@query false
+        credential.delete()
+        return@query true
     }
 }

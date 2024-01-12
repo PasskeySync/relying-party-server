@@ -36,6 +36,7 @@ interface UserRepo {
     suspend fun findUserByUsername(username: String): Optional<UserInfo>
     suspend fun findUserByUserHandle(userHandle: ByteArray): Optional<UserInfo>
     suspend fun createUser(username: String, userHandle: ByteArray, email: String): UserInfo
+    suspend fun deleteUser(user: UserInfo)
 }
 
 val userRepo: UserRepo = UserRepoImpl
@@ -61,4 +62,11 @@ object UserRepoImpl : UserRepo {
         }
     }
 
+    override suspend fun deleteUser(user: UserInfo) = query {
+        passwordRepo.deletePassword(user)
+        credentialRepo.findCredentialsByUser(user).forEach {
+            credentialRepo.deleteRegistration(user, ByteArray.fromBase64(it.credentialId))
+        }
+        user.delete()
+    }
 }

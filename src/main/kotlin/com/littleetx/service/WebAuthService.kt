@@ -11,6 +11,7 @@ import io.ktor.util.logging.*
 import org.slf4j.Logger
 import java.util.*
 import kotlin.jvm.optionals.getOrElse
+import kotlin.jvm.optionals.getOrNull
 import kotlin.random.Random
 
 typealias RegistrationCredential = PublicKeyCredential<
@@ -127,8 +128,9 @@ object WebAuthServiceImpl : WebAuthService {
                     .build()
             )
             if (!result.isSuccess) return Optional.empty()
+            val user = userRepo.findUserByEmail(result.username).getOrNull() ?: return Optional.empty()
             credentialRepo.updateRegistration(
-                result.username,
+                user,
                 result.credential.credentialId,
                 result.signatureCount,
             )
