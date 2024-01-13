@@ -66,6 +66,13 @@ fun Route.userRoute() {
                 ?: return@delete call.respond(HttpStatusCode.BadRequest, "Unknown session")
             val user = userService.getUserInfo(session).getOrNull()
                 ?: return@delete call.respond(HttpStatusCode.BadRequest, "Not login!")
+            if (credentialRepo.getCredentialIdsForUsername(user.email).size == 1
+                && !passwordRepo.getPasswordInfo(user).usePassword) {
+                return@delete call.respond(HttpStatusCode.BadRequest,
+                    "User cannot delete the last credential when password login is disabled"
+                )
+            }
+
             val credentialId = call.parameters["credentialId"]
                 ?: return@delete call.respond(HttpStatusCode.BadRequest, "Missing credentialId")
 
@@ -141,7 +148,7 @@ fun Route.userRoute() {
             }
             val passwordInfo = passwordRepo.getPasswordInfo(user)
             if (passwordInfo.password != encodePassword(request.oldPassword)) {
-                return@post call.respond(HttpStatusCode.BadRequest, "Password not match")
+                return@post call.respond(HttpStatusCode.BadRequest, "Incorrect old password")
             }
             passwordRepo.setPassword(user, encodePassword(request.newPassword))
             call.respond(HttpStatusCode.OK)
