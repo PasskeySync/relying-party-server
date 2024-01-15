@@ -15,12 +15,14 @@ import io.ktor.server.routing.*
 import io.ktor.server.sessions.*
 import kotlinx.serialization.Serializable
 import java.util.*
+import java.util.Collections.synchronizedMap
 import kotlin.jvm.optionals.getOrNull
 
-private val registryRequestCache = mutableMapOf<UUID, PublicKeyCredentialCreationOptions>()
-private val authnRequestCache = mutableMapOf<UUID, AssertionRequest>()
+
 fun Route.webauthnRoute() {
     val log = application.log
+    val registryRequestCache = synchronizedMap(mutableMapOf<UUID, PublicKeyCredentialCreationOptions>())
+    val authnRequestCache = synchronizedMap(mutableMapOf<UUID, AssertionRequest>())
 
     @Serializable
     data class RegisterInfo(

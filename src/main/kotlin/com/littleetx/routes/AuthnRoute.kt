@@ -15,7 +15,6 @@ import kotlinx.serialization.Serializable
 import kotlin.jvm.optionals.getOrNull
 import kotlin.random.Random
 
-@OptIn(ExperimentalStdlibApi::class)
 fun Route.authnRoute() {
     val log = application.log
 
